@@ -1,105 +1,129 @@
-import './style.css'
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import * as dat from 'dat.gui'
+import "./style.css";
+import * as THREE from "three";
+import * as dat from "dat.gui";
 
-// Debug
-const gui = new dat.GUI()
+// // Debug
+// const gui = new dat.GUI()
+
+//Loading
+const textureLoader = new THREE.TextureLoader();
+
+//Texture
+const planetTexture = textureLoader.load("/Textures/normalMap2.jpg");
 
 // Canvas
-const canvas = document.querySelector('canvas.webgl')
+const canvas = document.querySelector("canvas.webgl");
 
 // Scene
-const scene = new THREE.Scene()
+const scene = new THREE.Scene();
 
-// Objects
-const geometry = new THREE.TorusGeometry( .7, .2, 16, 100 );
+//Camera
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.z = 5;
 
-// Materials
-
-const material = new THREE.MeshBasicMaterial()
-material.color = new THREE.Color(0xff0000)
-
-// Mesh
-const sphere = new THREE.Mesh(geometry,material)
-scene.add(sphere)
-
-// Lights
-
-const pointLight = new THREE.PointLight(0xffffff, 0.1)
-pointLight.position.x = 2
-pointLight.position.y = 3
-pointLight.position.z = 4
-scene.add(pointLight)
-
-/**
- * Sizes
- */
-const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight
-}
-
-window.addEventListener('resize', () =>
-{
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
-
-    // Update camera
-    camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
-
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-})
-
-/**
- * Camera
- */
-// Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.x = 0
-camera.position.y = 0
-camera.position.z = 2
-scene.add(camera)
-
-// Controls
-// const controls = new OrbitControls(camera, canvas)
-// controls.enableDamping = true
-
-/**
- * Renderer
- */
+//Renderer
 const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
-})
-renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  canvas,
+  alpha: true,
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
 
-/**
- * Animate
- */
+//Mouse
+const mouse = {
+  x: 0,
+  y: 0,
+};
 
-const clock = new THREE.Clock()
+//Event Listeners
 
-const tick = () =>
-{
+window.addEventListener("mousemove", e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+//
+class Cube {
+  constructor(scene, color) {
+    this.color = color;
+    this.scene = scene;
 
-    const elapsedTime = clock.getElapsedTime()
+    this.cubeGeometry = new THREE.BoxGeometry();
+    this.cubeMaterial = new THREE.MeshBasicMaterial({ color: this.color });
+    this.cube = new THREE.Mesh(this.cubeGeometry, this.cubeMaterial);
+    this.cube.position.set(1, 1, 1);
+    this.scene.add(this.cube);
+  }
 
-    // Update objects
-    sphere.rotation.y = .5 * elapsedTime
+  rotate(x = 0, y = 0, z = 0) {
+    this.cube.rotation.x += x;
+    this.cube.rotation.y += y;
+    this.cube.rotation.z += z;
+  }
 
-    // Update Orbital Controls
-    // controls.update()
-
-    // Render
-    renderer.render(scene, camera)
-
-    // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
+  interact(mouse, time) {
+    this.cube.rotation.y +=
+      (mouse.x - window.innerWidth / 2) * 0.001 - this.cube.rotation.y;
+    this.cube.rotation.x +=
+      (mouse.y - window.innerHeight / 2) * 0.001 - this.cube.rotation.x;
+    this.cube.position.z =
+      15 * ((mouse.y - window.innerHeight / 2) * 0.001 - this.cube.rotation.x);
+  }
 }
 
-tick()
+class Planet {
+  constructor(scene, color, texture) {
+    this.color = color;
+    this.scene = scene;
+    this.texture = texture;
+    this.geometry = new THREE.SphereBufferGeometry(2, 64, 64);
+
+    this.material = new THREE.MeshStandardMaterial();
+    this.material.metalness = 0.1;
+    this.material.roughness = 0.9;
+    this.material.normalMap = this.texture;
+    this.material.color = new THREE.Color(this.color);
+
+    this.sphere = new THREE.Mesh(this.geometry, this.material);
+    this.sphere.position.set(1.5, 0);
+
+    this.scene.add(this.sphere);
+  }
+  rotate(x = 0, y = 0, z = 0) {
+    this.sphere.rotation.x += x;
+    this.sphere.rotation.y += y;
+    this.sphere.rotation.z += z;
+  }
+  interact(mouse) {
+    this.sphere.rotation.y +=
+      (mouse.x - window.innerWidth / 2) * 0.005 - this.sphere.rotation.y;
+    this.sphere.rotation.x +=
+      (mouse.y - window.innerHeight / 2) * 0.005 - this.sphere.rotation.x;
+    // this.sphere.position.z =
+    //   0.5 *
+    //   ((mouse.y - window.innerHeight / 2) * 0.001 - this.sphere.rotation.x);
+  }
+}
+
+//const cube = new Cube(scene, 0xff0000);
+const planet = new Planet(scene, 0xff7f50, planetTexture);
+
+//Lights
+const light = new THREE.PointLight(0xffffff, 1.5, 100, 2);
+light.position.set(-15, 0, 10);
+scene.add(light);
+
+//Animate
+
+const animate = () => {
+  renderer.render(scene, camera);
+  //cube.rotate(0.01, 0.01, 0.01);
+  planet.rotate(0.005, 0.005, 0.005);
+  planet.interact(mouse);
+  requestAnimationFrame(animate);
+};
+
+animate();
